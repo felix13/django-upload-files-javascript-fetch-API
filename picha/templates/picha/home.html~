@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+
+{% block title %} {% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="row">
+    <div class="col-sm-8 my-2"> 
+        <button  id="upload" type="button" class="btn btn-success">Upload</button> 
+    </div>
+  </div>
+  
+  
+  {% csrf_token %}
+  
+  <div class="row">
+     {% for image in images %}
+        <div class="col-md-4 mb-3">
+          <div class="card">
+          
+            <div class="card-header">
+             {{image.name}} 
+             <a id="edit" class="float-right" data-id={{image.id}} href="#">Edit</a>          
+            </div>
+            
+            <div class="card-body"><img style="width:100%;height:200px;" src="{{ image.image.url}}"></div>
+          </div>
+        </div>
+        {% if forloop.counter|divisibleby:3 %}</div><div class="row">{% endif %}
+     {% endfor %}
+   </div>
+   
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+
+$(document).on('click', '#upload', function(){
+           
+      beforeSend();
+      
+      function beforeSend() {
+        $("#staticBackdrop .modal-content").html("");
+        $("#staticBackdrop").modal("show");
+   
+      }
+      
+      
+      
+      fetch('/add_picture/', {
+      headers:{
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest', //Necessary to work with request.is_ajax()
+      },
+      })
+      .then(response => {
+          return response.json() //Convert response to JSON
+      })
+      .then(data => {
+         $("#staticBackdrop .modal-content").html(data.picture_form);
+      })
+         
+ 
+});
+
+
+
+$(document).on("click", ".image_submit", function(){
+      
+    var formdata = new FormData();  
+    
+    var image = $('#id_image')[0].files[0]
+    
+    formdata.append( 'image', image ); //  The form with the file inputs
+    
+    var csrf = $('input[name="csrfmiddlewaretoken"]').val();
+    
+    formdata.append('csrfmiddlewaretoken', csrf);
+    
+    var name = $('input[name="name"]').val();
+    
+    formdata.append('name', name)
+    
+    
+    fetch('/add_picture/', {
+      method: 'POST',
+      mode: 'same-origin',  // Do not send CSRF token to another domain.
+      headers:{
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest', //Necessary to work with request.is_ajax()
+        'X-CSRFToken': csrf,
+      },
+      body: formdata //JavaScript object of data to POST
+      })
+      .then(response => {
+          return response.json() //Convert response to JSON
+      })
+      .then(data => {
+      
+         if (!data.form_is_valid){
+               $("#staticBackdrop .modal-body").html("");
+               $("#staticBackdrop .modal-body").html(data.picture_form);
+            }
+               
+         if (data.form_is_valid) {
+               $("#staticBackdrop").modal("hide");
+               location.reload();  
+            }
+                    
+       })
+       
+  return false;
+  
+  });
+  
+  
+   
+  
+$(document).on('click', '#edit', function(){
+  
+      var image_id = $(this).attr("data-id"); 
+  
+      beforeSend();
+      
+      function beforeSend() {
+        $("#staticBackdrop .modal-content").html("");
+        $("#staticBackdrop").modal("show");
+   
+      }
+      
+      
+      
+      fetch('/edit_picture/' + image_id + "/", {
+      headers:{
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest', 
+      },
+      })
+      .then(response => {
+          return response.json() 
+      })
+      .then(data => {
+         $("#staticBackdrop .modal-content").html(data.edit_picture);
+      })
+      
+      
+});
+
+
+
+
+$(document).on("click", ".submit_edited_image", function(){
+      
+    var formdata = new FormData();  
+    
+    var image = $('#id_image')[0].files[0]
+    
+    formdata.append( 'image', image ); //  The form with the file inputs
+    
+    var csrf = $('input[name="csrfmiddlewaretoken"]').val();
+    
+    formdata.append('csrfmiddlewaretoken', csrf);
+    
+    var name = $('input[name="name"]').val();
+    
+    formdata.append('name', name)
+    
+    var image_id = $(this).attr("data-id"); 
+    
+
+    fetch('/edit_picture/' + image_id + "/", {
+      method: 'POST',
+      mode: 'same-origin',  // Do not send CSRF token to another domain.
+      headers:{
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest', //Necessary to work with request.is_ajax()
+        'X-CSRFToken': csrf,
+     },
+     body: formdata //JavaScript object of data to POST
+     })
+     .then(response => {
+         return response.json() //Convert response to JSON
+     })
+     .then(data => {
+      
+         if (!data.form_is_valid){
+           $("#staticBackdrop .modal-content").html("");
+           $("#staticBackdrop .modal-content").html(data.edit_picture);
+         }
+            
+         if (data.form_is_valid) {
+           $("#staticBackdrop").modal("hide");
+           location.reload(); 
+         }
+                    
+       })
+     
+  return false;
+  
+  });
+
+</script>
+
+{% endblock extra_js %}
